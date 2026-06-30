@@ -12,7 +12,7 @@ type Props = {
   timeMode: TimeMode
   virtualTime: Date
   onBack: () => void
-  onSend: (text: string) => void
+  onSend: (text: string) => Promise<void> | void
 }
 
 export function GameLobby({
