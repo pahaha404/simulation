@@ -54,9 +54,8 @@ export function GameLobby({
         </h1>
       </header>
 
-      {/* Main — 3-column: [left w-52] [phone auto] [right w-52]
-          양쪽이 같은 고정폭이므로 폰이 항상 정중앙에 위치 */}
-      <main className="relative z-10 flex flex-1 items-center justify-center gap-4 overflow-hidden px-4 py-3">
+      {/* Main — 3-column: [left] [phone] [large standee] */}
+      <main className="relative z-10 flex flex-1 items-center justify-center gap-4 overflow-hidden px-4 py-3 xl:gap-6">
 
         {/* LEFT: 캐릭터 정보 카드 (데스크톱 전용, 우측 스탠디와 동일 폭으로 균형) */}
         <aside className="hidden w-52 shrink-0 flex-col items-stretch gap-3 lg:flex">
@@ -67,7 +66,7 @@ export function GameLobby({
         <div
           className="relative shrink-0"
           style={{
-            height: "min(calc(100svh - 9rem), calc(100vw * 19 / 9))",
+            height: "min(calc(100svh - 8rem), calc(100vw * 19 / 8.4))",
             aspectRatio: "9 / 19",
           }}
         >
@@ -83,8 +82,8 @@ export function GameLobby({
           </PhoneFrame>
         </div>
 
-        {/* RIGHT: 캐릭터 스탠디 — 폰 바로 옆, 동일 폭 w-52 */}
-        <aside className="hidden w-52 shrink-0 flex-col items-center justify-end lg:flex">
+        {/* RIGHT: 캐릭터 스탠디 */}
+        <aside className="hidden w-72 shrink-0 flex-col items-center justify-end xl:flex 2xl:w-80">
           <CharacterStandee character={character} />
         </aside>
       </main>
@@ -172,29 +171,27 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
 
 function CharacterStandee({ character }: { character: Character }) {
   return (
-    /* w-full: 부모 w-52 에 꽉 차게. aspect-[3/5]로 비율 유지 */
-    <div className="relative w-full">
+    <div className="relative flex h-[min(76svh,43rem)] w-full items-end">
       {/* 오라 글로우 */}
       <div
-        className="absolute -bottom-2 left-1/2 size-40 -translate-x-1/2 rounded-full blur-3xl"
+        className="absolute -bottom-6 left-1/2 size-64 -translate-x-1/2 rounded-full blur-3xl"
         style={{ backgroundColor: character.glow, opacity: 0.45 }}
       />
 
       {/* 카드 */}
       <div
-        className="relative w-full overflow-hidden rounded-[1.5rem] border-2 shadow-2xl"
+        className="relative h-full w-full overflow-hidden rounded-[1.75rem] border-2 shadow-2xl"
         style={{
-          aspectRatio: "3 / 5",
           borderColor: character.glow,
-          boxShadow: `0 0 32px ${character.glow}55`,
+          boxShadow: `0 0 42px ${character.glow}66`,
         }}
       >
         <Image
           src={character.standee || "/placeholder.svg"}
           alt={`${character.name} 캐릭터 일러스트`}
           fill
-          sizes="208px"
-          className="object-cover object-top"
+          sizes="(min-width:1536px) 20rem, 18rem"
+          className="object-contain object-center"
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
 

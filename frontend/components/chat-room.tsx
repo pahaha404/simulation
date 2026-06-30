@@ -15,8 +15,25 @@ type Props = {
   timeMode: TimeMode
   virtualTime: Date
   onBack: () => void
-  onSend: (text: string) => void
+  onSend: (text: string) => Promise<void> | void
 }
+
+const blockedKeywords = [
+  "몸무게",
+  "종교",
+  "정치",
+  "좌파",
+  "우파",
+  "대통령",
+  "음식",
+  "전남친",
+  "가족",
+  "동생",
+  "오빠",
+]
+
+const blockedKeywordWarning =
+  "삐삑 경고입니다! 현재 관계에서 그런 키워드를 이용한 대화는 적절하지 않아요! 반성하세요!"
 
 export function ChatRoom({
   character,
@@ -28,6 +45,7 @@ export function ChatRoom({
 }: Props) {
   const [draft, setDraft] = useState("")
   const [isTyping, setIsTyping] = useState(false)
+  const [warning, setWarning] = useState<string | null>(null)
   const composingRef = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -37,14 +55,22 @@ export function ChatRoom({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
   }, [messages, isTyping])
 
-  function handleSend() {
+  async function handleSend() {
     const text = draft.trim()
     if (!text || isTyping) return
+    if (blockedKeywords.some((keyword) => text.includes(keyword))) {
+      setWarning(blockedKeywordWarning)
+      window.setTimeout(() => setWarning(null), 3200)
+      return
+    }
     setDraft("")
-    onSend(text)
+    setWarning(null)
     setIsTyping(true)
-    // hide the typing indicator shortly after the AI reply is appended
-    window.setTimeout(() => setIsTyping(false), 650)
+    try {
+      await onSend(text)
+    } finally {
+      setIsTyping(false)
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -62,6 +88,27 @@ export function ChatRoom({
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-card/60">
+      {warning && (
+        <div
+          role="alert"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-5 backdrop-blur-sm animate-warning-overlay"
+        >
+          <div className="relative w-full max-w-3xl overflow-hidden rounded-[2rem] border-4 border-red-500 bg-red-950/95 px-6 py-8 text-center shadow-[0_0_60px_rgba(239,68,68,0.75)] animate-warning-card md:px-10 md:py-12">
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(transparent_0%,rgba(255,255,255,0.12)_48%,transparent_52%)] bg-[length:100%_14px] opacity-30 animate-warning-scan" />
+            <div className="relative">
+              <p className="mb-4 text-3xl font-black text-red-200 drop-shadow-[0_0_16px_rgba(248,113,113,0.95)] md:text-6xl">
+                삐삑 경고입니다!
+              </p>
+              <p className="text-pretty text-xl font-black leading-relaxed text-white md:text-4xl">
+                현재 관계에서 그런 키워드를 이용한 대화는 적절하지 않아요!
+              </p>
+              <p className="mt-5 text-2xl font-black text-yellow-200 md:text-5xl">
+                반성하세요!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-primary/20 bg-card/85 px-3 py-2.5 backdrop-blur-md">
         <button

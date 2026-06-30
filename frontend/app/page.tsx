@@ -58,39 +58,69 @@ export default function Page() {
     })
   }
 
-  function handleSend(text: string) {
+  async function handleSend(text: string) {
     if (!selectedCharacter) return
     const id = selectedCharacter.id
+    const state = chats[id] ?? { messages: [], virtualTime: Date.now() }
+
+    // 1) user message uses the current virtual time (demo) or real clock (real)
+    const userTime = timeMode === "demo" ? state.virtualTime : Date.now()
+    const userMsg: Message = {
+      id: makeId(),
+      sender: "user",
+      text,
+      timestamp: userTime,
+    }
+
+    setChats((prev) => ({
+      ...prev,
+      [id]: {
+        virtualTime: userTime,
+        messages: [...state.messages, userMsg],
+      },
+    }))
+
+    // 2) compute the AI reply time
+    const aiTime =
+      timeMode === "demo" ? userTime + demoJumpMinutes() * 60_000 : Date.now()
+
+    const turn = state.messages.filter((m) => m.sender === "user").length
+    let reply = getReply(id, turn)
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          character: selectedCharacter,
+          messages: state.messages,
+          text,
+        }),
+      })
+      const payload = (await response.json()) as { reply?: string }
+      if (payload.reply?.trim()) {
+        reply = payload.reply.trim()
+      }
+    } catch {
+      reply = getReply(id, turn)
+    }
+
+    const aiMsg: Message = {
+      id: makeId(),
+      sender: "ai",
+      text: reply,
+      timestamp: aiTime,
+    }
 
     setChats((prev) => {
-      const state = prev[id] ?? { messages: [], virtualTime: Date.now() }
-
-      // 1) user message uses the current virtual time (demo) or real clock (real)
-      const userTime = timeMode === "demo" ? state.virtualTime : Date.now()
-      const userMsg: Message = {
-        id: makeId(),
-        sender: "user",
-        text,
-        timestamp: userTime,
-      }
-
-      // 2) compute the AI reply time
-      const aiTime =
-        timeMode === "demo" ? userTime + demoJumpMinutes() * 60_000 : Date.now()
-
-      const turn = state.messages.filter((m) => m.sender === "user").length
-      const aiMsg: Message = {
-        id: makeId(),
-        sender: "ai",
-        text: getReply(id, turn),
-        timestamp: aiTime,
-      }
-
+      const nextState = prev[id] ?? { messages: [...state.messages, userMsg], virtualTime: userTime }
       return {
         ...prev,
         [id]: {
           virtualTime: timeMode === "demo" ? aiTime : Date.now(),
-          messages: [...state.messages, userMsg, aiMsg],
+          messages: [...nextState.messages, aiMsg],
         },
       }
     })

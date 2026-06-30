@@ -19,7 +19,7 @@ type Scene = {
 const openingScenes: Scene[] = [
   {
     id: "dark-room",
-    image: "/opening/01-dark-room.png",
+    image: "/backgrounds/dark.png",
     speaker: "소봉이",
     text: "나는 23년째 모태솔로였다. 오늘도 아무 일 없이 끝날 줄 알았다.",
     durationMs: 4200,
@@ -27,24 +27,59 @@ const openingScenes: Scene[] = [
   },
   {
     id: "rain-street",
-    image: "/opening/02-rain-street.png",
+    image: "/backgrounds/rain.png",
     speaker: "소봉이",
     text: "그날 밤, 빗속 도로 위로 낯선 불빛이 번져 왔다.",
     durationMs: 4700,
   },
   {
     id: "truck",
-    image: "/opening/03-truck.png",
+    image: "/backgrounds/truck.png",
     speaker: "소봉이",
     text: "눈앞을 가른 빛과 굉음이 모든 생각을 삼켜 버렸다.",
     durationMs: 4300,
   },
   {
     id: "fall",
-    image: "/opening/04-fall.png",
+    image: "/backgrounds/hospital.png",
     speaker: "소봉이",
-    text: "다시 눈을 떴을 때, 나를 걱정하는 네 명의 메시지가 도착해 있었다.",
+    text: "나는 네 명의 여자로 둘러싸여진 채로 병원에서 깨어났다.",
+    durationMs: 5000,
+  },
+  {
+    id: "hospital-worry",
+    image: "/backgrounds/hospital.png",
+    speaker: "???",
+    text: "소봉아 괜찮아! 너무 걱정했잖아!! 눈 뜬 거 맞지? 내 말 들려?",
     durationMs: 5200,
+  },
+  {
+    id: "hospital-girlfriend",
+    image: "/backgrounds/hospital.png",
+    speaker: "???",
+    text: "사귄지 첫날부터 이렇게 다치면 어떡해!! 진짜 심장 떨어지는 줄 알았어.",
+    durationMs: 5600,
+  },
+  {
+    id: "hospital-confused",
+    image: "/backgrounds/hospital.png",
+    speaker: "소봉이",
+    text: "아니, 얘들은 누구지...? 왜 다들 나를 이렇게 걱정하는 거야?",
+    durationMs: 5200,
+  },
+  {
+    id: "hospital-happy",
+    image: "/backgrounds/hospital.png",
+    speaker: "소봉이",
+    text: "하지만 갑자기 생긴 여사친들에게 둘러싸인 이 상황... 솔직히 조금 행복했다.",
+    durationMs: 5400,
+  },
+  {
+    id: "choose-girlfriend",
+    image: "/backgrounds/hospital.png",
+    speaker: "소봉이",
+    text: "이제 이 네 명 중 한 명을 여자친구로 선택해야 한다.",
+    durationMs: 4600,
   },
 ]
 

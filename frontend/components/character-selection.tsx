@@ -21,10 +21,10 @@ export function CharacterSelection({ timeMode, onTimeModeChange, onSelect }: Pro
           <Heart className="size-7 fill-current" />
         </div>
         <h1 className="text-pretty font-heading text-3xl font-black tracking-tight text-foreground [text-shadow:0_1px_10px_oklch(0.7_0.16_0/0.25)]">
-          상대를 선택하세요
+          여자친구를 선택하세요
         </h1>
         <p className="mt-2 max-w-xs text-balance text-sm leading-relaxed text-muted-foreground">
-          마음이 통하는 AI 상대와 설레는 대화를 시작해보세요
+          병원에서 나를 기다리던 네 명 중 한 명과 첫날의 채팅을 시작하세요
         </p>
       </header>
 
@@ -70,7 +70,7 @@ export function CharacterSelection({ timeMode, onTimeModeChange, onSelect }: Pro
       <section className="w-full max-w-md">
         <div className="mb-3 flex items-center gap-1.5 px-1">
           <Sparkles className="size-4 text-primary" />
-          <h2 className="text-sm font-semibold text-foreground">캐릭터</h2>
+          <h2 className="text-sm font-semibold text-foreground">여자친구 후보</h2>
         </div>
         <div className="grid grid-cols-2 gap-3.5">
           {characters.map((c) => (
