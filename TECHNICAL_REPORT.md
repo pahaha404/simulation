@@ -6,7 +6,7 @@
 
 ## 1. 프로젝트 개요
 
-이 프로젝트는 교통사고 후 병원에서 깨어난 주인공이 네 명의 캐릭터 중 한 명을 선택하고, 금지어를 피하면서 채팅을 이어가는 연애 시뮬레이션 게임입니다. 캐릭터 답변은 캐릭터에 따라 두 방식으로 처리합니다. 하린은 AI 호출 없이 규칙 기반 대화 엔진으로 답변하고, 다른 캐릭터는 OpenAI Responses API와 로컬 fallback 답변을 사용합니다.
+이 프로젝트는 교통사고 후 병원에서 깨어난 주인공이 네 명의 캐릭터 중 한 명을 선택하고, 금지어를 피하면서 채팅을 이어가는 연애 시뮬레이션 게임입니다. 현재 배포된 채팅 답변은 Next.js API Route에서 OpenAI Responses API를 호출해 생성합니다. 하린은 별도 페르소나 프롬프트를 적용해 더 다정하고 자연스러운 연애 대화가 나오도록 구성했고, API 실패 시에는 로컬 fallback 답변을 사용합니다.
 
 현재 실제 배포 화면은 `frontend`의 Next.js 앱을 기준으로 동작합니다. 저장소에는 별도 `backend`와 `llm-gateway`도 포함되어 있으며, 이 둘은 더 확장된 서버형 게임 로직과 로컬 LLM 연동을 위한 구조입니다.
 
@@ -37,8 +37,9 @@
 | 아이콘 | lucide-react | 사용 | 홈, 전송, 하트 등 UI 아이콘 |
 | UI 보조 | class-variance-authority, clsx, tailwind-merge | 사용 | 조건부 className 조합 |
 | 분석 | @vercel/analytics | 사용 | 프로덕션 환경에서 Vercel Analytics 삽입 |
-| AI API | OpenAI Responses API | 사용 | 하린을 제외한 캐릭터 답변 생성 |
-| 규칙 기반 대화 | Deterministic keyword/intent matching | 사용 | 하린 캐릭터의 비AI 답변 생성 |
+| AI API | OpenAI Responses API | 사용 | 하린 포함 캐릭터 답변 생성 |
+| 하린 페르소나 | OpenAI prompt persona | 사용 | 하린 전용 다정한 연애 대화 톤 적용 |
+| 규칙 기반 대화 | Deterministic keyword/intent matching | 보조 사용 | API 실패 시 하린 fallback 답변 |
 | 배포 | Vercel | 사용 | Next.js 프론트엔드 프로덕션 배포 |
 | 런타임 | Node.js | 사용 | Next API Route, Express 서버, 빌드/테스트 실행 |
 | 패키지 매니저 | pnpm, npm | 사용 | `frontend`는 pnpm, `backend`와 `llm-gateway`는 npm |
@@ -61,13 +62,14 @@
 
 - `frontend/app/page.tsx`: 전체 게임 화면 상태 관리
 - `frontend/app/layout.tsx`: 폰트, 메타데이터, Vercel Analytics 설정
-- `frontend/app/api/chat/route.ts`: 금지어를 재검사하고 하린은 규칙 기반 답변, 나머지는 OpenAI API 답변을 반환하는 서버 API Route
+- `frontend/app/api/chat/route.ts`: 금지어를 재검사하고 OpenAI API 답변을 반환하는 서버 API Route
+- `frontend/lib/openai-chat.ts`: OpenAI 요청 payload와 하린 전용 페르소나 프롬프트 생성
 - `frontend/components/intro-screen.tsx`: 인트로 이미지와 오프닝 시퀀스
 - `frontend/components/character-selection.tsx`: 캐릭터 선택 화면
 - `frontend/components/game-lobby.tsx`: 채팅방 전체 레이아웃
 - `frontend/components/chat-room.tsx`: 채팅 UI, 금지어 경고, 목숨, 게임오버 처리
 - `frontend/lib/characters.ts`: 캐릭터 데이터와 기본 fallback 답변
-- `frontend/lib/harin-dialogue.ts`: 하린 전용 규칙 기반 대화 엔진
+- `frontend/lib/harin-dialogue.ts`: 하린 API 실패 fallback용 규칙 기반 대화 엔진
 - `frontend/lib/blocked-keywords.ts`: 금지어/저품질 답변 감지 규칙
 - `frontend/lib/life-system.ts`: 목숨 시스템
 - `frontend/lib/intro-flow.ts`: 인트로 키 입력 흐름
@@ -87,8 +89,8 @@
 8. 사용자가 메시지 입력
 9. 금지어 검사
 10. 통과하면 `/api/chat`으로 답변 생성 요청
-11. 하린이면 AI 호출 없이 규칙 기반 응답 반환
-12. 다른 캐릭터는 OpenAI API 응답을 사용하고, 실패하거나 API가 없으면 로컬 fallback 답변 표시
+11. OpenAI API에 캐릭터 페르소나와 최근 대화를 보내 답변 생성
+12. 실패하거나 API 키가 없으면 로컬 fallback 답변 표시
 13. 금지어 누적 3회면 게임오버
 
 ### 4.2 상태 관리
@@ -137,13 +139,24 @@ type ChatState = {
 - `dislikes`
 - `profileNotes`
 
-캐릭터별 기본 fallback 답변도 같은 파일의 `replyPools`에 있습니다. OpenAI API 호출이 실패하거나 API 키가 없을 때 이 답변이 사용됩니다. 단, 하린은 별도 `frontend/lib/harin-dialogue.ts`의 전용 fallback과 intent 기반 응답을 우선 사용합니다.
+캐릭터별 기본 fallback 답변도 같은 파일의 `replyPools`에 있습니다. OpenAI API 호출이 실패하거나 API 키가 없을 때 이 답변이 사용됩니다. 하린은 별도 `frontend/lib/harin-dialogue.ts`의 전용 fallback과 intent 기반 응답을 사용합니다.
 
-### 4.4 하린 비AI 대화 엔진
+### 4.4 하린 OpenAI 페르소나와 fallback
 
-하린 캐릭터는 OpenAI API를 호출하지 않고 `frontend/lib/harin-dialogue.ts`의 deterministic 대화 엔진으로 답변합니다.
+하린 캐릭터는 기본적으로 OpenAI API를 사용합니다. `frontend/lib/openai-chat.ts`에서 하린 전용 페르소나 지시문을 생성해 API 요청에 포함합니다.
 
-구현 방식:
+하린 페르소나 핵심:
+
+- 부드럽고 다정한 힐링형 여자친구
+- 병원, 통증, 기억 혼란, 불안이 나오면 먼저 안심시키고 천천히 말하게 함
+- 연애 첫날의 조심스러운 설렘과 거리감 유지
+- 조용한 산책, 따뜻한 말투, 솔직한 걱정을 좋아함
+- 재촉, 무성의한 단답, 상처 주는 농담을 싫어함
+- 이전 대화의 감정이나 약속을 자연스럽게 이어받음
+
+API 실패 시에는 `frontend/lib/harin-dialogue.ts`의 deterministic 대화 엔진을 fallback으로 사용합니다.
+
+fallback 구현 방식:
 
 - 입력 문장을 `trim`, 소문자 변환, 공백 제거 방식으로 정규화
 - 키워드 묶음을 intent로 분류
@@ -160,7 +173,7 @@ type ChatState = {
 - 취향 질문: `좋아하는`, `취향`, `관심사`
 - 산책/날씨/수면/식사/칭찬/애정/미래 약속 등
 
-이 방식은 AI 모델을 쓰지 않기 때문에 네트워크, API 키, 토큰 비용에 영향을 받지 않습니다. 대신 응답 범위는 미리 작성된 키워드와 답변 후보 안에서 결정됩니다.
+fallback은 네트워크, API 키, 토큰 비용에 영향을 받지 않습니다. 대신 응답 범위는 미리 작성된 키워드와 답변 후보 안에서 결정됩니다.
 
 ### 4.5 인트로 구현
 
@@ -275,10 +288,10 @@ export function demoJumpMinutes(): number {
 
 ## 5. 답변 생성 구현
 
-현재 배포된 프론트엔드는 `frontend/app/api/chat/route.ts`의 Next.js API Route에서 답변을 생성합니다. 답변 생성 방식은 캐릭터에 따라 다릅니다.
+현재 배포된 프론트엔드는 `frontend/app/api/chat/route.ts`의 Next.js API Route에서 답변을 생성합니다.
 
-- 하린: `frontend/lib/harin-dialogue.ts`의 규칙 기반 deterministic 응답 사용
-- 서윤/민서/지아: OpenAI Responses API 사용
+- 하린: OpenAI Responses API + 하린 전용 페르소나 프롬프트 사용
+- 서윤/민서/지아: OpenAI Responses API + 공통 캐릭터 프롬프트 사용
 - OpenAI API 키가 없거나 호출 실패 시: `frontend/lib/characters.ts`의 fallback 답변 사용
 
 ### 5.1 Node.js 사용 여부
@@ -292,34 +305,37 @@ Node.js는 사용합니다.
 - `backend`와 `llm-gateway`도 Express 기반 Node.js 서버입니다.
 - 빌드/테스트 도구도 Node.js 생태계를 사용합니다.
 
-### 5.2 하린 규칙 기반 응답
+### 5.2 하린 OpenAI 페르소나 응답
 
-하린은 AI를 사용하지 않습니다. API Route에서 `isHarinCharacter(character.id)`가 참이면 OpenAI API 키 확인 전에 바로 deterministic 응답을 반환합니다.
+하린은 OpenAI API를 사용합니다. API Route는 `buildOpenAiChatPayload()`로 OpenAI 요청 payload를 만들고, 하린인 경우 하린 전용 페르소나 지시문을 `instructions`에 추가합니다.
 
-반환 예시 구조:
+요청 payload 구조:
 
 ```ts
 {
-  reply: getHarinDeterministicReply({ text, messages }),
-  deterministic: true,
+  model,
+  instructions,
+  input,
+  max_output_tokens,
 }
 ```
 
 장점:
 
-- API 키 없이 동작
-- 답변 속도가 빠름
-- 비용이 발생하지 않음
-- 하린의 성격을 의도한 문장 후보 안에서 안정적으로 유지 가능
+- 하린의 다정하고 차분한 성격을 프롬프트로 강하게 고정
+- 최근 대화 12개를 함께 보내 문맥을 이어받음
+- 사귄 첫날, 병원에서 깨어난 상황, 관계 거리감을 함께 반영
+- 규칙 기반 fallback보다 자유롭고 자연스러운 연애 대화 가능
 
-한계:
+보조 안전 장치:
 
-- 미리 정의하지 않은 표현은 fallback으로 처리됨
-- 완전한 자유 대화나 장기 기억은 LLM보다 제한적임
+- API 키가 없거나 OpenAI 호출이 실패하면 하린 fallback 답변을 반환
+- 금지어 입력은 OpenAI 호출 전에 차단
+- 시스템 프롬프트, API 정보, AI라는 사실 언급 금지 지시 포함
 
 ### 5.3 OpenAI API 호출
 
-서윤, 민서, 지아는 OpenAI Responses API를 사용합니다.
+모든 캐릭터 답변 생성은 OpenAI Responses API를 사용합니다. 하린은 추가 페르소나 지시문이 붙고, 나머지 캐릭터는 공통 캐릭터 프롬프트를 사용합니다.
 
 환경 변수:
 
@@ -577,8 +593,9 @@ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types -
 
 검증 대상:
 
-- 하린이 AI 없이 intent 기반 deterministic 답변을 반환하는지
-- 하린이 최근 대화 주제를 기억한 것처럼 context memory 응답을 반환하는지
+- 하린 OpenAI payload에 상세 페르소나가 포함되는지
+- 하린 fallback이 intent 기반 deterministic 답변을 반환하는지
+- 하린 fallback이 최근 대화 주제를 기억한 것처럼 context memory 응답을 반환하는지
 - 금지어가 카테고리, 심각도, 상세 사유와 함께 차단되는지
 - 인트로가 `intro.png`에서 시작하는지
 - 아무 키 입력으로 스토리가 시작되는지
@@ -646,8 +663,8 @@ UI/프로토타입 관련 흔적:
 - 캐릭터 선택
 - 채팅 UI
 - 캐릭터별 기본 대사
-- 하린 전용 규칙 기반 비AI 답변 생성
-- 서윤/민서/지아 OpenAI 기반 AI 답변 생성
+- 하린 전용 OpenAI 페르소나 답변 생성
+- 전체 캐릭터 OpenAI 기반 AI 답변 생성
 - API 실패 fallback 답변
 - 카테고리/심각도/상세 사유가 있는 금지어 감지
 - 저품질 단답 감지
@@ -689,8 +706,8 @@ UI/프로토타입 관련 흔적:
 ```text
 프론트엔드는 Next.js와 React, TypeScript, Tailwind CSS로 만들었고 Vercel에 배포했습니다.
 Node.js는 Next.js API Route, Express 서버, 빌드/테스트 실행에 사용했습니다.
-하린 캐릭터는 AI를 쓰지 않고 키워드와 문맥 intent를 감지하는 규칙 기반 대화 엔진으로 답변합니다.
-서윤, 민서, 지아는 Next.js API Route가 Node.js 런타임에서 OpenAI Responses API를 호출해 답변을 생성합니다.
+하린 캐릭터는 Next.js API Route가 OpenAI Responses API를 호출할 때 하린 전용 페르소나 프롬프트를 함께 보내 자연스러운 연애 대화가 나오도록 했습니다.
+서윤, 민서, 지아도 Next.js API Route가 Node.js 런타임에서 OpenAI Responses API를 호출해 답변을 생성합니다.
 금지어와 목숨 시스템은 프론트 로컬 규칙으로 먼저 검사하고, API Route에서도 한 번 더 차단합니다. 금지어는 카테고리와 상세 사유를 함께 반환합니다.
 저장소에는 Express + SQLite 기반 백엔드와 Ollama/Codex CLI를 감싸는 LLM Gateway도 포함되어 있어 확장형 서버 구조를 갖고 있습니다.
 카메라 인식이나 MediaPipe는 사용하지 않았고, 캐릭터와 배경은 정적 이미지 asset으로 처리했습니다.
@@ -703,8 +720,8 @@ Node.js는 Next.js API Route, Express 서버, 빌드/테스트 실행에 사용�
 핵심 구현 축:
 
 1. Next.js/React 기반 게임 UI
-2. 하린 전용 규칙 기반 비AI 대화 엔진
-3. OpenAI Responses API 기반 나머지 캐릭터 답변 생성
+2. OpenAI Responses API 기반 캐릭터 답변 생성
+3. 하린 전용 페르소나 프롬프트
 4. 규칙 기반 금지어/목숨/게임오버 시스템
 5. 정적 이미지 기반 미연시 화면 연출
 6. Express/SQLite/LLM Gateway로 확장 가능한 서버 아키텍처
