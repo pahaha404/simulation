@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { buildOpenAiChatPayload } from "./openai-chat.ts"
+import { buildOpenAiChatPayload, getSafeOpenAiErrorMessage } from "./openai-chat.ts"
 
 const ai = (text: string) => ({ sender: "ai" as const, text })
 const user = (text: string) => ({ sender: "user" as const, text })
@@ -43,4 +43,13 @@ test("non-harin OpenAI payload keeps the shared character prompt", () => {
   assert.match(payload.instructions, /미소녀 연애 시뮬레이션/)
   assert.match(payload.input, /캐릭터 이름: 서윤/)
   assert.doesNotMatch(payload.instructions, /하린은/)
+})
+
+test("safe OpenAI error message does not expose provider details", () => {
+  const message = getSafeOpenAiErrorMessage(
+    "Incorrect API key provided: sk-proj-secret. You can find your API key at https://platform.openai.com/account/api-keys.",
+  )
+
+  assert.equal(message, "OpenAI response failed.")
+  assert.doesNotMatch(message, /sk-|api key|platform\.openai/i)
 })

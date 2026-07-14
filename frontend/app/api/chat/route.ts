@@ -1,6 +1,11 @@
 import { getReply } from "@/lib/characters"
 import { evaluateBlockedMessage } from "@/lib/blocked-keywords"
-import { buildOpenAiChatPayload, type ChatCharacter, type ChatMessage } from "@/lib/openai-chat"
+import {
+  buildOpenAiChatPayload,
+  getSafeOpenAiErrorMessage,
+  type ChatCharacter,
+  type ChatMessage,
+} from "@/lib/openai-chat"
 
 export const runtime = "nodejs"
 
@@ -67,7 +72,7 @@ export async function POST(request: Request) {
       return Response.json({
         reply: getReply(character.id, countUserTurns(messages)),
         fallback: true,
-        error: payload.error?.message ?? "OpenAI response failed.",
+        error: getSafeOpenAiErrorMessage(payload.error?.message),
       })
     }
 

@@ -30,6 +30,10 @@ export function buildOpenAiChatPayload({
   }
 }
 
+export function getSafeOpenAiErrorMessage(_providerMessage?: string) {
+  return "OpenAI response failed."
+}
+
 function buildInstructions(character: ChatCharacter) {
   const shared = [
     "너는 미소녀 연애 시뮬레이션 게임 속 여자친구 캐릭터다.",
