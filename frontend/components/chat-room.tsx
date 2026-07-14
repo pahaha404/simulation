@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { ArrowLeft, Send, Zap, Clock } from "lucide-react"
+import { ArrowLeft, Send, Zap, Clock, Heart } from "lucide-react"
 import type { Character } from "@/lib/characters"
 import { getTimelinePhase } from "@/lib/characters"
+import { blockedKeywordWarning, hasBlockedKeyword } from "@/lib/blocked-keywords"
+import { getRemainingLives, isGameOver, MAX_LIVES } from "@/lib/life-system"
 import { formatKoreanTime } from "@/lib/time"
 import type { Message, TimeMode } from "@/app/page"
 import { cn } from "@/lib/utils"
@@ -12,53 +14,61 @@ import { cn } from "@/lib/utils"
 type Props = {
   character: Character
   messages: Message[]
+  warningCount: number
   timeMode: TimeMode
   virtualTime: Date
   onBack: () => void
   onSend: (text: string) => Promise<void> | void
+  onBlockedMessage: () => void
+  onRetry: () => void
 }
-
-const blockedKeywords = [
-  "몸무게",
-  "종교",
-  "정치",
-  "좌파",
-  "우파",
-  "대통령",
-  "음식",
-  "전남친",
-  "가족",
-  "동생",
-  "오빠",
-]
-
-const blockedKeywordWarning =
-  "삐삑 경고입니다! 현재 관계에서 그런 키워드를 이용한 대화는 적절하지 않아요! 반성하세요!"
 
 export function ChatRoom({
   character,
   messages,
+  warningCount,
   timeMode,
   virtualTime,
   onBack,
   onSend,
+  onBlockedMessage,
+  onRetry,
 }: Props) {
   const [draft, setDraft] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [warning, setWarning] = useState<string | null>(null)
+  const [phaseEvent, setPhaseEvent] = useState<string | null>(null)
   const composingRef = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const previousPhaseRef = useRef<string | null>(null)
 
-  const phase = getTimelinePhase(messages.length)
+  const userMessageCount = messages.filter((message) => message.sender === "user").length
+  const phase = getTimelinePhase(userMessageCount)
+  const remainingLives = getRemainingLives(warningCount)
+  const gameOver = isGameOver(warningCount)
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
   }, [messages, isTyping])
 
+  useEffect(() => {
+    const previousPhase = previousPhaseRef.current
+    previousPhaseRef.current = phase
+
+    if (!previousPhase || previousPhase === phase || userMessageCount === 0) {
+      return undefined
+    }
+
+    setPhaseEvent(phase)
+    const timeoutId = window.setTimeout(() => setPhaseEvent(null), 2600)
+    return () => window.clearTimeout(timeoutId)
+  }, [phase, userMessageCount])
+
   async function handleSend() {
     const text = draft.trim()
-    if (!text || isTyping) return
-    if (blockedKeywords.some((keyword) => text.includes(keyword))) {
+    if (!text || isTyping || gameOver) return
+    if (hasBlockedKeyword(text)) {
+      onBlockedMessage()
       setWarning(blockedKeywordWarning)
       window.setTimeout(() => setWarning(null), 3200)
       return
@@ -109,8 +119,54 @@ export function ChatRoom({
           </div>
         </div>
       )}
+      {gameOver && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 px-5 backdrop-blur-md animate-warning-overlay">
+          <div className="relative w-full max-w-5xl overflow-hidden rounded-[2rem] border-4 border-red-500 bg-zinc-950 px-7 py-10 text-center shadow-[0_0_90px_rgba(239,68,68,0.9)] animate-warning-card md:px-12 md:py-16">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.28),transparent_58%)]" />
+            <div className="relative">
+              <p className="mb-5 text-4xl font-black text-red-300 drop-shadow-[0_0_18px_rgba(248,113,113,0.95)] md:text-7xl">
+                GAME OVER
+              </p>
+              <p className="text-pretty text-2xl font-black leading-relaxed text-white md:text-5xl">
+                당신은 커플이 될 자격이 없습니다....
+              </p>
+              <p className="mt-6 text-xl font-black leading-relaxed text-yellow-200 md:text-4xl">
+                다시 플레이 해보세요! 커플이 되는 그 날 까지 파이팅!!
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setWarning(null)
+                  onRetry()
+                }}
+                className="mt-8 rounded-full bg-red-500 px-8 py-3 text-sm font-black text-white shadow-[0_0_28px_rgba(239,68,68,0.55)] transition-colors hover:bg-red-400"
+              >
+                다시 도전하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {phaseEvent && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-6 backdrop-blur-md animate-warning-overlay">
+          <div className="relative w-full max-w-4xl overflow-hidden rounded-[2rem] border border-primary/60 bg-card/95 px-8 py-10 text-center shadow-[0_0_70px_oklch(0.7_0.16_0/0.6)] animate-phase-card md:px-12 md:py-14">
+            <p className="text-sm font-black uppercase tracking-[0.35em] text-primary">
+              Relationship Updated
+            </p>
+            <p className="mt-5 text-6xl font-black text-foreground drop-shadow-[0_0_24px_oklch(0.7_0.16_0/0.65)] md:text-8xl">
+              {phaseEvent}
+            </p>
+            <p className="mt-5 text-lg font-bold text-muted-foreground md:text-2xl">
+              두 사람의 관계가 다음 단계로 넘어갔습니다.
+            </p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-primary/20 bg-card/85 px-3 py-2.5 backdrop-blur-md">
+        <span className="shrink-0 rounded-full bg-primary px-2.5 py-1 text-[10px] font-black text-primary-foreground shadow-md">
+          {phase}
+        </span>
         <button
           type="button"
           onClick={onBack}
@@ -133,9 +189,25 @@ export function ChatRoom({
           <h2 className="truncate text-sm font-bold text-foreground">{character.name}</h2>
           <p className="truncate text-xs text-muted-foreground">{character.tagline}</p>
         </div>
-        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-          {phase}
-        </span>
+        <div
+          aria-label={`남은 목숨 ${remainingLives}개`}
+          className="ml-1 flex shrink-0 items-center gap-1 rounded-full border border-red-300/30 bg-black/45 px-2.5 py-1.5 shadow-lg"
+        >
+          <span className="mr-0.5 text-[10px] font-black text-red-100">목숨</span>
+          {Array.from({ length: MAX_LIVES }).map((_, index) => {
+            const active = index < remainingLives
+            return (
+              <Heart
+                key={index}
+                aria-hidden
+                className={cn(
+                  "size-4 drop-shadow-[0_0_8px_rgba(248,113,113,0.75)]",
+                  active ? "fill-red-400 text-red-400" : "fill-transparent text-red-900",
+                )}
+              />
+            )
+          })}
+        </div>
       </header>
 
       {/* Virtual time banner */}
@@ -179,12 +251,13 @@ export function ChatRoom({
             onCompositionEnd={() => (composingRef.current = false)}
             placeholder={`${character.name}에게 메시지 보내기...`}
             aria-label="메시지 입력"
+            disabled={gameOver}
             className="h-11 flex-1 rounded-full border border-border bg-background px-4 text-sm text-foreground outline-none transition-shadow placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
           />
           <button
             type="button"
             onClick={handleSend}
-            disabled={!draft.trim() || isTyping}
+            disabled={!draft.trim() || isTyping || gameOver}
             aria-label="전송"
             className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-all hover:opacity-90 disabled:opacity-40"
           >

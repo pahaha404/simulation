@@ -14,6 +14,9 @@ export type Character = {
   aura: string
   /** opening message shown when chat starts */
   greeting: string
+  likes: string[]
+  dislikes: string[]
+  profileNotes: string[]
 }
 
 export const characters: Character[] = [
@@ -28,6 +31,9 @@ export const characters: Character[] = [
     glow: "oklch(0.78 0.08 230)",
     aura: "Soft Blue Aura",
     greeting: "괜찮아? 많이 놀랐겠다. 천천히 말해도 돼. 나 듣고 있어.",
+    likes: ["차분한 산책", "따뜻한 말투", "솔직한 걱정"],
+    dislikes: ["재촉하는 대화", "무성의한 답장", "상처 주는 농담"],
+    profileNotes: ["천천히 공감해주면 호감이 오른다", "짧은 단답보다 감정을 설명하는 답을 좋아한다"],
   },
   {
     id: "seoyun",
@@ -40,6 +46,9 @@ export const characters: Character[] = [
     glow: "oklch(0.58 0.22 25)",
     aura: "Crimson Aura",
     greeting: "살아있네. 다행이긴 한데... 그런 표정으로 있지는 마.",
+    likes: ["예의 있는 직진", "현실적인 계획", "선 넘지 않는 장난"],
+    dislikes: ["가벼운 플러팅", "무례한 질문", "눈치 없는 단답"],
+    profileNotes: ["차갑게 말해도 대화를 끊는 뜻은 아니다", "선을 지키면서 진심을 보여주는 답이 잘 통한다"],
   },
   {
     id: "minseo",
@@ -52,6 +61,9 @@ export const characters: Character[] = [
     glow: "oklch(0.76 0.16 350)",
     aura: "Pink Aura",
     greeting: "야 너 진짜 걱정했잖아. 이제 괜찮은 거 맞지?",
+    likes: ["밝은 리액션", "귀여운 농담", "빠른 공감"],
+    dislikes: ["분위기 깨는 말", "지나친 진지함", "무반응"],
+    profileNotes: ["장난을 받아주면 대화 텐션이 오른다", "짧게라도 감정을 표현하는 답을 좋아한다"],
   },
   {
     id: "jia",
@@ -64,6 +76,9 @@ export const characters: Character[] = [
     glow: "oklch(0.42 0.12 300)",
     aura: "Deep Purple Aura",
     greeting: "깨어났구나. 그 말투... 기억해둘게.",
+    likes: ["조용한 배려", "기억해주는 대화", "은근한 진심"],
+    dislikes: ["캐묻는 질문", "과한 텐션", "가벼운 말바꾸기"],
+    profileNotes: ["말수는 적지만 이전 답변을 중요하게 본다", "차분하고 구체적인 답이 관계를 안정시킨다"],
   },
 ]
 
@@ -103,13 +118,13 @@ export function getReply(characterId: string, turn: number): string {
   return pool[turn % pool.length]
 }
 
-/** message count -> human friendly timeline phase label */
-export function getTimelinePhase(messageCount: number): string {
-  const pairs = Math.floor(messageCount / 2)
-  if (pairs < 3) return "1일차"
-  if (pairs < 6) return "3일차"
-  if (pairs < 10) return "1주차"
-  if (pairs < 16) return "2주차"
-  if (pairs < 24) return "1개월차"
-  return "연인 사이 ❤️"
+const timelinePhases = ["1일차", "1주차", "2주차", "한 달차", "6개월"]
+
+/** user message count -> human friendly relationship timeline phase label */
+export function getTimelinePhase(userMessageCount: number): string {
+  const phaseIndex = Math.min(
+    Math.floor(userMessageCount / 3),
+    timelinePhases.length - 1,
+  )
+  return timelinePhases[phaseIndex]
 }

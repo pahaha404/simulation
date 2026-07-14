@@ -5,6 +5,7 @@ import { IntroScreen } from "@/components/intro-screen"
 import { CharacterSelection } from "@/components/character-selection"
 import { GameLobby } from "@/components/game-lobby"
 import { getReply, type Character } from "@/lib/characters"
+import { MAX_LIVES } from "@/lib/life-system"
 import { demoJumpMinutes } from "@/lib/time"
 
 export type TimeMode = "demo" | "real"
@@ -22,6 +23,7 @@ type ChatState = {
   messages: Message[]
   /** the current virtual clock for this character */
   virtualTime: number
+  warningCount: number
 }
 
 function makeId() {
@@ -45,6 +47,7 @@ export default function Page() {
         ...prev,
         [character.id]: {
           virtualTime: now,
+          warningCount: 0,
           messages: [
             {
               id: makeId(),
@@ -61,7 +64,7 @@ export default function Page() {
   async function handleSend(text: string) {
     if (!selectedCharacter) return
     const id = selectedCharacter.id
-    const state = chats[id] ?? { messages: [], virtualTime: Date.now() }
+    const state = chats[id] ?? { messages: [], virtualTime: Date.now(), warningCount: 0 }
 
     // 1) user message uses the current virtual time (demo) or real clock (real)
     const userTime = timeMode === "demo" ? state.virtualTime : Date.now()
@@ -76,6 +79,7 @@ export default function Page() {
       ...prev,
       [id]: {
         virtualTime: userTime,
+        warningCount: state.warningCount,
         messages: [...state.messages, userMsg],
       },
     }))
@@ -115,15 +119,69 @@ export default function Page() {
     }
 
     setChats((prev) => {
-      const nextState = prev[id] ?? { messages: [...state.messages, userMsg], virtualTime: userTime }
+      const nextState = prev[id] ?? {
+        messages: [...state.messages, userMsg],
+        virtualTime: userTime,
+        warningCount: state.warningCount,
+      }
       return {
         ...prev,
         [id]: {
           virtualTime: timeMode === "demo" ? aiTime : Date.now(),
+          warningCount: nextState.warningCount,
           messages: [...nextState.messages, aiMsg],
         },
       }
     })
+  }
+
+  function handleBlockedMessage() {
+    if (!selectedCharacter) return
+    const id = selectedCharacter.id
+    setChats((prev) => {
+      const now = Date.now()
+      const state = prev[id] ?? {
+        messages: [
+          {
+            id: makeId(),
+            sender: "ai" as const,
+            text: selectedCharacter.greeting,
+            timestamp: now,
+          },
+        ],
+        virtualTime: now,
+        warningCount: 0,
+      }
+
+      return {
+        ...prev,
+        [id]: {
+          ...state,
+          warningCount: Math.min(state.warningCount + 1, MAX_LIVES),
+        },
+      }
+    })
+  }
+
+  function handleRetry() {
+    if (!selectedCharacter) return
+    const id = selectedCharacter.id
+    const now = Date.now()
+    setChats((prev) => ({
+      ...prev,
+      [id]: {
+        virtualTime: now,
+        warningCount: 0,
+        messages: [
+          {
+            id: makeId(),
+            sender: "ai",
+            text: selectedCharacter.greeting,
+            timestamp: now,
+          },
+        ],
+      },
+    }))
   }
 
   function handleBack() {
@@ -146,10 +204,13 @@ export default function Page() {
         <GameLobby
           character={selectedCharacter}
           messages={state?.messages ?? []}
+          warningCount={state?.warningCount ?? 0}
           timeMode={timeMode}
           virtualTime={new Date(state?.virtualTime ?? Date.now())}
           onBack={handleBack}
           onSend={handleSend}
+          onBlockedMessage={handleBlockedMessage}
+          onRetry={handleRetry}
         />
       </main>
     )

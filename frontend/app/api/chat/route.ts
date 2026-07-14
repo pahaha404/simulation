@@ -1,4 +1,5 @@
 import { getReply } from "@/lib/characters"
+import { blockedKeywordWarning, hasBlockedKeyword } from "@/lib/blocked-keywords"
 
 export const runtime = "nodejs"
 
@@ -13,23 +14,6 @@ type ChatCharacter = {
   tagline: string
   personality: string
 }
-
-const blockedKeywords = [
-  "몸무게",
-  "종교",
-  "정치",
-  "좌파",
-  "우파",
-  "대통령",
-  "음식",
-  "전남친",
-  "가족",
-  "동생",
-  "오빠",
-]
-
-const blockedKeywordWarning =
-  "삐삑 경고입니다! 현재 관계에서 그런 키워드를 이용한 대화는 적절하지 않아요! 반성하세요!"
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
@@ -46,7 +30,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid chat request." }, { status: 400 })
   }
 
-  if (blockedKeywords.some((keyword) => text.includes(keyword))) {
+  if (hasBlockedKeyword(text)) {
     return Response.json(
       { blocked: true, warning: blockedKeywordWarning },
       { status: 400 },

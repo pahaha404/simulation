@@ -9,19 +9,25 @@ import type { Message, TimeMode } from "@/app/page"
 type Props = {
   character: Character
   messages: Message[]
+  warningCount: number
   timeMode: TimeMode
   virtualTime: Date
   onBack: () => void
   onSend: (text: string) => Promise<void> | void
+  onBlockedMessage: () => void
+  onRetry: () => void
 }
 
 export function GameLobby({
   character,
   messages,
+  warningCount,
   timeMode,
   virtualTime,
   onBack,
   onSend,
+  onBlockedMessage,
+  onRetry,
 }: Props) {
   return (
     <div
@@ -57,8 +63,8 @@ export function GameLobby({
       {/* Main — 3-column: [left] [phone] [large standee] */}
       <main className="relative z-10 flex flex-1 items-center justify-center gap-4 overflow-hidden px-4 py-3 xl:gap-6">
 
-        {/* LEFT: 캐릭터 정보 카드 (데스크톱 전용, 우측 스탠디와 동일 폭으로 균형) */}
-        <aside className="hidden w-52 shrink-0 flex-col items-stretch gap-3 lg:flex">
+        {/* LEFT: 캐릭터 프로필 */}
+        <aside className="hidden h-[min(76svh,43rem)] w-80 shrink-0 flex-col items-stretch lg:flex xl:w-96">
           <CharacterInfoCard character={character} />
         </aside>
 
@@ -74,10 +80,13 @@ export function GameLobby({
             <ChatRoom
               character={character}
               messages={messages}
+              warningCount={warningCount}
               timeMode={timeMode}
               virtualTime={virtualTime}
               onBack={onBack}
               onSend={onSend}
+              onBlockedMessage={onBlockedMessage}
+              onRetry={onRetry}
             />
           </PhoneFrame>
         </div>
@@ -110,40 +119,101 @@ export function GameLobby({
 
 function CharacterInfoCard({ character }: { character: Character }) {
   return (
-    <div className="rounded-2xl border border-primary/20 bg-card/80 p-4 shadow-lg backdrop-blur-md">
-      {/* 아바타 + 이름 */}
-      <div className="mb-3 flex items-center gap-2.5">
-        <div className="relative size-11 shrink-0 overflow-hidden rounded-full ring-2 ring-primary/30">
-          <Image
-            src={character.avatar || "/placeholder.svg"}
-            alt={character.name}
-            fill
-            sizes="44px"
-            className="object-cover"
-          />
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-black text-foreground">{character.name}</p>
-          <p className="truncate text-xs text-muted-foreground">{character.tagline}</p>
+    <div className="flex h-full flex-col overflow-hidden rounded-3xl border border-primary/20 bg-zinc-950/75 shadow-2xl backdrop-blur-md">
+      <div className="relative h-44 shrink-0 overflow-hidden border-b border-white/10">
+        <Image
+          src={character.standee || character.avatar || "/placeholder.svg"}
+          alt=""
+          fill
+          sizes="384px"
+          className="object-cover object-top opacity-70"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/35 to-transparent" />
+        <div className="absolute bottom-4 left-4 right-4 flex items-end gap-3">
+          <div className="relative size-20 shrink-0 overflow-hidden rounded-2xl border border-white/20 bg-black/40 shadow-xl">
+            <Image
+              src={character.avatar || "/placeholder.svg"}
+              alt={character.name}
+              fill
+              sizes="80px"
+              className="object-cover"
+            />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-2xl font-black text-white">{character.name}</p>
+            <p className="truncate text-sm font-bold" style={{ color: character.glow }}>
+              {character.tagline}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* 성격 설명 */}
-      <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-        {character.personality}
-      </p>
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5">
+        <section>
+          <h2 className="text-xs font-black uppercase tracking-[0.22em] text-primary">
+            Profile
+          </h2>
+          <p className="mt-2 text-sm font-semibold leading-relaxed text-zinc-200">
+            {character.personality}
+          </p>
+        </section>
 
-      {/* 오라 배지 */}
-      <div
-        className="rounded-full border px-3 py-1 text-center text-[10px] font-bold"
-        style={{
-          borderColor: character.glow,
-          color: character.glow,
-          backgroundColor: `${character.glow}18`,
-        }}
-      >
-        {character.aura}
+        <section className="grid grid-cols-2 gap-3">
+          <ProfileList title="좋아하는 것" items={character.likes} tone="like" />
+          <ProfileList title="싫어하는 것" items={character.dislikes} tone="dislike" />
+        </section>
+
+        <section className="rounded-2xl border border-white/10 bg-white/[0.06] p-4">
+          <h3 className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">
+            Talk Guide
+          </h3>
+          <ul className="mt-3 space-y-2">
+            {character.profileNotes.map((note) => (
+              <li key={note} className="rounded-xl bg-black/25 px-3 py-2 text-xs font-semibold leading-relaxed text-zinc-200">
+                {note}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <div
+          className="mt-auto rounded-2xl border px-4 py-3 text-center text-sm font-black"
+          style={{
+            borderColor: character.glow,
+            color: character.glow,
+            backgroundColor: `${character.glow}18`,
+          }}
+        >
+          {character.aura}
+        </div>
       </div>
+    </div>
+  )
+}
+
+function ProfileList({
+  title,
+  items,
+  tone,
+}: {
+  title: string
+  items: string[]
+  tone: "like" | "dislike"
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-3">
+      <h3 className="text-xs font-black text-zinc-300">{title}</h3>
+      <ul className="mt-3 space-y-2">
+        {items.map((item) => (
+          <li key={item} className="flex items-start gap-2 text-xs font-semibold leading-relaxed text-zinc-200">
+            <span
+              className="mt-1 size-1.5 shrink-0 rounded-full"
+              style={{ backgroundColor: tone === "like" ? "oklch(0.75 0.16 145)" : "oklch(0.68 0.2 25)" }}
+            />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
