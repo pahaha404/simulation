@@ -1,5 +1,6 @@
 import { getReply } from "@/lib/characters"
-import { blockedKeywordWarning, hasBlockedKeyword } from "@/lib/blocked-keywords"
+import { evaluateBlockedMessage } from "@/lib/blocked-keywords"
+import { getHarinDeterministicReply, isHarinCharacter } from "@/lib/harin-dialogue"
 
 export const runtime = "nodejs"
 
@@ -29,11 +30,24 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid chat request." }, { status: 400 })
   }
 
-  if (hasBlockedKeyword(text)) {
+  const blockedMessage = evaluateBlockedMessage(text)
+  if (blockedMessage.blocked) {
     return Response.json(
-      { blocked: true, warning: blockedKeywordWarning },
+      {
+        blocked: true,
+        warning: blockedMessage.warning,
+        reason: blockedMessage.reason,
+        category: blockedMessage.category,
+      },
       { status: 400 },
     )
+  }
+
+  if (isHarinCharacter(character.id)) {
+    return Response.json({
+      reply: getHarinDeterministicReply({ text, messages }),
+      deterministic: true,
+    })
   }
 
   const apiKey = process.env.OPENAI_API_KEY

@@ -1,3 +1,5 @@
+import { getHarinFallbackReply, isHarinCharacter } from "./harin-dialogue"
+
 export type Character = {
   id: string
   name: string
@@ -103,6 +105,10 @@ const replyPools: Record<string, string[]> = {
 }
 
 export function getReply(characterId: string, turn: number): string {
+  if (isHarinCharacter(characterId)) {
+    return getHarinFallbackReply(turn)
+  }
+
   const pool = replyPools[characterId] ?? ["..."]
   return pool[turn % pool.length]
 }

@@ -5,7 +5,7 @@ import Image from "next/image"
 import { ArrowLeft, Send, Heart } from "lucide-react"
 import type { Character } from "@/lib/characters"
 import { getTimelinePhase } from "@/lib/characters"
-import { blockedKeywordWarning, hasBlockedKeyword } from "@/lib/blocked-keywords"
+import { evaluateBlockedMessage } from "@/lib/blocked-keywords"
 import { getRemainingLives, isGameOver, MAX_LIVES } from "@/lib/life-system"
 import { formatKoreanTime } from "@/lib/time"
 import type { Message } from "@/app/page"
@@ -65,9 +65,10 @@ export function ChatRoom({
   async function handleSend() {
     const text = draft.trim()
     if (!text || isTyping || gameOver) return
-    if (hasBlockedKeyword(text)) {
+    const blockedMessage = evaluateBlockedMessage(text)
+    if (blockedMessage.blocked) {
       onBlockedMessage()
-      setWarning(blockedKeywordWarning)
+      setWarning(blockedMessage.reason)
       window.setTimeout(() => setWarning(null), 3200)
       return
     }
@@ -108,7 +109,7 @@ export function ChatRoom({
                 삐삑 경고입니다!
               </p>
               <p className="text-pretty text-xl font-black leading-relaxed text-white md:text-4xl">
-                현재 관계에서 그런 키워드를 이용한 대화는 적절하지 않아요!
+                {warning}
               </p>
               <p className="mt-5 text-2xl font-black text-yellow-200 md:text-5xl">
                 반성하세요!
