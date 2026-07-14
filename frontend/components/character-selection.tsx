@@ -1,18 +1,15 @@
 "use client"
 
 import Image from "next/image"
-import { Heart, Zap, Clock, Info, Sparkles } from "lucide-react"
+import { Heart, Sparkles } from "lucide-react"
 import { characters, type Character } from "@/lib/characters"
-import type { TimeMode } from "@/app/page"
 import { cn } from "@/lib/utils"
 
 type Props = {
-  timeMode: TimeMode
-  onTimeModeChange: (mode: TimeMode) => void
   onSelect: (character: Character) => void
 }
 
-export function CharacterSelection({ timeMode, onTimeModeChange, onSelect }: Props) {
+export function CharacterSelection({ onSelect }: Props) {
   return (
     <div className="flex min-h-dvh flex-col items-center px-4 py-10">
       {/* Header */}
@@ -27,44 +24,6 @@ export function CharacterSelection({ timeMode, onTimeModeChange, onSelect }: Pro
           병원에서 나를 기다리던 네 명 중 한 명과 첫날의 채팅을 시작하세요
         </p>
       </header>
-
-      {/* Time mode toggle — premium pill slider */}
-      <section className="mb-5 w-full max-w-md">
-        <div className="relative grid grid-cols-2 rounded-full border border-primary/20 bg-card/70 p-1.5 shadow-lg shadow-primary/10 backdrop-blur-md">
-          {/* sliding thumb */}
-          <span
-            aria-hidden
-            className={cn(
-              "absolute inset-y-1.5 w-[calc(50%-0.375rem)] rounded-full bg-primary shadow-md shadow-primary/40 transition-transform duration-300 ease-out",
-              timeMode === "demo" ? "translate-x-0" : "translate-x-[calc(100%+0.75rem)]",
-            )}
-          />
-          <ModeButton
-            active={timeMode === "demo"}
-            onClick={() => onTimeModeChange("demo")}
-            icon={<Zap className="size-4" />}
-            label="데모 모드"
-          />
-          <ModeButton
-            active={timeMode === "real"}
-            onClick={() => onTimeModeChange("real")}
-            icon={<Clock className="size-4" />}
-            label="실제 모드"
-          />
-        </div>
-      </section>
-
-      {/* Framed hint box */}
-      <section className="mb-7 w-full max-w-md">
-        <div className="flex items-start gap-2.5 rounded-2xl border border-primary/20 bg-pink-50/80 px-4 py-3 text-xs leading-relaxed text-secondary-foreground shadow-sm backdrop-blur-md">
-          <Info className="mt-0.5 size-4 shrink-0 text-primary" />
-          <p>
-            {timeMode === "demo"
-              ? "데모 모드: 답장마다 가상 시간이 20~30분씩 빠르게 흘러가 관계가 빠르게 진전됩니다."
-              : "실제 모드: 메시지 시간이 실제 시계와 똑같이 동기화되어 현실처럼 대화합니다."}
-          </p>
-        </div>
-      </section>
 
       {/* Character grid */}
       <section className="w-full max-w-md">
@@ -89,9 +48,6 @@ export function CharacterSelection({ timeMode, onTimeModeChange, onSelect }: Pro
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-foreground/30 via-transparent to-transparent" />
-                <span className="absolute left-2.5 top-2.5 rounded-full bg-background/85 px-2 py-0.5 text-[10px] font-semibold text-primary backdrop-blur">
-                  {c.tagline}
-                </span>
               </div>
               <div className="p-3">
                 <h3 className="font-heading text-base font-bold text-foreground">{c.name}</h3>
@@ -104,36 +60,7 @@ export function CharacterSelection({ timeMode, onTimeModeChange, onSelect }: Pro
         </div>
       </section>
 
-      <p className="mt-8 text-center text-[11px] text-muted-foreground">
-        프로토타입 데모 · 모든 대화는 가상입니다
-      </p>
+      <p className="mt-8 text-center text-[11px] text-muted-foreground">모든 대화는 가상입니다</p>
     </div>
-  )
-}
-
-function ModeButton({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean
-  onClick: () => void
-  icon: React.ReactNode
-  label: string
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "relative z-10 flex items-center justify-center gap-2 rounded-full px-3 py-2.5 text-sm font-semibold transition-colors",
-        active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
   )
 }

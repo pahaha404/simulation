@@ -4,13 +4,12 @@ import Image from "next/image"
 import { Home } from "lucide-react"
 import { ChatRoom } from "@/components/chat-room"
 import type { Character } from "@/lib/characters"
-import type { Message, TimeMode } from "@/app/page"
+import type { Message } from "@/app/page"
 
 type Props = {
   character: Character
   messages: Message[]
   warningCount: number
-  timeMode: TimeMode
   virtualTime: Date
   onBack: () => void
   onSend: (text: string) => Promise<void> | void
@@ -22,7 +21,6 @@ export function GameLobby({
   character,
   messages,
   warningCount,
-  timeMode,
   virtualTime,
   onBack,
   onSend,
@@ -81,7 +79,6 @@ export function GameLobby({
               character={character}
               messages={messages}
               warningCount={warningCount}
-              timeMode={timeMode}
               virtualTime={virtualTime}
               onBack={onBack}
               onSend={onSend}
@@ -141,9 +138,6 @@ function CharacterInfoCard({ character }: { character: Character }) {
           </div>
           <div className="min-w-0">
             <p className="truncate text-2xl font-black text-white">{character.name}</p>
-            <p className="truncate text-sm font-bold" style={{ color: character.glow }}>
-              {character.tagline}
-            </p>
           </div>
         </div>
       </div>

@@ -1,7 +1,6 @@
 export type Character = {
   id: string
   name: string
-  tagline: string
   personality: string
   avatar: string
   /** full-body standee shown in the lobby right column */
@@ -21,7 +20,6 @@ export const characters: Character[] = [
   {
     id: "harin",
     name: "하린",
-    tagline: "Healing",
     personality: "부드럽고 다정한 힐링형 · 차분하게 마음을 열어요",
     avatar: "/characters/1/avatar.png",
     standee: "/characters/1/standee.png",
@@ -35,7 +33,6 @@ export const characters: Character[] = [
   {
     id: "seoyun",
     name: "서윤",
-    tagline: "Tsundere",
     personality: "말은 차갑지만 선을 지키면 깊게 다가오는 현실주의자",
     avatar: "/characters/2/avatar.png",
     standee: "/characters/2/standee.png",
@@ -49,7 +46,6 @@ export const characters: Character[] = [
   {
     id: "minseo",
     name: "민서",
-    tagline: "Bubbly",
     personality: "애교 많고 활발한 리액션형 · 장난과 진심을 같이 봐요",
     avatar: "/characters/3/avatar.png",
     standee: "/characters/3/standee.png",
@@ -63,7 +59,6 @@ export const characters: Character[] = [
   {
     id: "jia",
     name: "지아",
-    tagline: "Mystery",
     personality: "쿨한 미스터리형 · 말수는 적지만 이전 대화를 기억해요",
     avatar: "/characters/4/avatar.png",
     standee: "/characters/4/standee.png",

@@ -8,7 +8,6 @@ import { getReply, type Character } from "@/lib/characters"
 import { MAX_LIVES } from "@/lib/life-system"
 import { demoJumpMinutes } from "@/lib/time"
 
-export type TimeMode = "demo" | "real"
 export type Screen = "selection" | "chat"
 
 export type Message = {
@@ -34,7 +33,6 @@ export default function Page() {
   const [isIntroScreen, setIsIntroScreen] = useState(true)
   const [currentScreen, setCurrentScreen] = useState<Screen>("selection")
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null)
-  const [timeMode, setTimeMode] = useState<TimeMode>("demo")
   const [chats, setChats] = useState<Record<string, ChatState>>({})
 
   function handleSelect(character: Character) {
@@ -66,8 +64,7 @@ export default function Page() {
     const id = selectedCharacter.id
     const state = chats[id] ?? { messages: [], virtualTime: Date.now(), warningCount: 0 }
 
-    // 1) user message uses the current virtual time (demo) or real clock (real)
-    const userTime = timeMode === "demo" ? state.virtualTime : Date.now()
+    const userTime = state.virtualTime
     const userMsg: Message = {
       id: makeId(),
       sender: "user",
@@ -84,9 +81,7 @@ export default function Page() {
       },
     }))
 
-    // 2) compute the AI reply time
-    const aiTime =
-      timeMode === "demo" ? userTime + demoJumpMinutes() * 60_000 : Date.now()
+    const aiTime = userTime + demoJumpMinutes() * 60_000
 
     const turn = state.messages.filter((m) => m.sender === "user").length
     let reply = getReply(id, turn)
@@ -127,7 +122,7 @@ export default function Page() {
       return {
         ...prev,
         [id]: {
-          virtualTime: timeMode === "demo" ? aiTime : Date.now(),
+          virtualTime: aiTime,
           warningCount: nextState.warningCount,
           messages: [...nextState.messages, aiMsg],
         },
@@ -205,7 +200,6 @@ export default function Page() {
           character={selectedCharacter}
           messages={state?.messages ?? []}
           warningCount={state?.warningCount ?? 0}
-          timeMode={timeMode}
           virtualTime={new Date(state?.virtualTime ?? Date.now())}
           onBack={handleBack}
           onSend={handleSend}
@@ -219,11 +213,7 @@ export default function Page() {
   return (
     <GameFrame>
       <main className="animate-vn-fade-up mx-auto w-full max-w-lg">
-        <CharacterSelection
-          timeMode={timeMode}
-          onTimeModeChange={setTimeMode}
-          onSelect={handleSelect}
-        />
+        <CharacterSelection onSelect={handleSelect} />
       </main>
     </GameFrame>
   )

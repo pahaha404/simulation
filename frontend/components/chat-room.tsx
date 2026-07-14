@@ -2,20 +2,19 @@
 
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
-import { ArrowLeft, Send, Zap, Clock, Heart } from "lucide-react"
+import { ArrowLeft, Send, Heart } from "lucide-react"
 import type { Character } from "@/lib/characters"
 import { getTimelinePhase } from "@/lib/characters"
 import { blockedKeywordWarning, hasBlockedKeyword } from "@/lib/blocked-keywords"
 import { getRemainingLives, isGameOver, MAX_LIVES } from "@/lib/life-system"
 import { formatKoreanTime } from "@/lib/time"
-import type { Message, TimeMode } from "@/app/page"
+import type { Message } from "@/app/page"
 import { cn } from "@/lib/utils"
 
 type Props = {
   character: Character
   messages: Message[]
   warningCount: number
-  timeMode: TimeMode
   virtualTime: Date
   onBack: () => void
   onSend: (text: string) => Promise<void> | void
@@ -27,7 +26,6 @@ export function ChatRoom({
   character,
   messages,
   warningCount,
-  timeMode,
   virtualTime,
   onBack,
   onSend,
@@ -187,7 +185,6 @@ export function ChatRoom({
         </div>
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-sm font-bold text-foreground">{character.name}</h2>
-          <p className="truncate text-xs text-muted-foreground">{character.tagline}</p>
         </div>
         <div
           aria-label={`남은 목숨 ${remainingLives}개`}
@@ -212,14 +209,7 @@ export function ChatRoom({
 
       {/* Virtual time banner */}
       <div className="flex items-center justify-center gap-1.5 border-b border-border bg-secondary/60 px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
-        {timeMode === "demo" ? (
-          <Zap className="size-3 text-primary" />
-        ) : (
-          <Clock className="size-3 text-primary" />
-        )}
-        <span>
-          {timeMode === "demo" ? "데모 시간" : "실제 시간"} · {formatVirtual(virtualTime)}
-        </span>
+        <span>{formatVirtual(virtualTime)}</span>
       </div>
 
       {/* Messages */}

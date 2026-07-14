@@ -11,7 +11,6 @@ type ChatMessage = {
 type ChatCharacter = {
   id: string
   name: string
-  tagline: string
   personality: string
 }
 
@@ -104,7 +103,6 @@ function buildPrompt(character: ChatCharacter, messages: ChatMessage[], text: st
 
   return [
     `캐릭터 이름: ${character.name}`,
-    `캐릭터 태그: ${character.tagline}`,
     `캐릭터 성격: ${character.personality}`,
     "상황: 소봉이는 사고 후 병원에서 깨어났고, 네 명 중 너를 여자친구로 선택했다.",
     "관계: 사귄 지 첫날. 걱정, 설렘, 장난, 거리감을 캐릭터 성격에 맞게 섞는다.",
