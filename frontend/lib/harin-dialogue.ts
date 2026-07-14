@@ -14,6 +14,62 @@ type Intent = {
   responses: string[]
 }
 
+type BlendedIntent = {
+  id: string
+  keywordGroups: string[][]
+  responses: string[]
+}
+
+const blendedIntents: BlendedIntent[] = [
+  {
+    id: "thanks_anxiety",
+    keywordGroups: [
+      ["고마워", "고맙", "덕분"],
+      ["무서", "불안", "걱정", "겁나"],
+    ],
+    responses: [
+      "그렇게 말해줘서 고마워. 아직 무서운 건 당연해. 내가 재촉하지 않을 테니까 천천히 숨부터 맞춰보자.",
+      "고맙다는 말보다 네가 무섭다고 솔직하게 말해준 게 더 안심돼. 괜찮아, 나 여기 있어.",
+      "옆에 있어줘서 고맙다고 해주는 건 따뜻한데, 지금은 네 불안부터 같이 내려놓자. 한 번에 괜찮아지지 않아도 돼.",
+    ],
+  },
+  {
+    id: "thanks_pain",
+    keywordGroups: [
+      ["고마워", "고맙", "덕분"],
+      ["아프", "병원", "머리", "어지러"],
+    ],
+    responses: [
+      "고맙다는 말은 나중에 해도 돼. 지금은 어디가 얼마나 아픈지부터 천천히 말해줘.",
+      "그렇게 말해줘서 고마워. 그래도 아픈 건 참지 말고 바로 알려줘. 내가 같이 확인할게.",
+    ],
+  },
+  {
+    id: "apology_promise",
+    keywordGroups: [
+      ["미안", "사과", "잘못"],
+      ["앞으로", "조심", "약속", "노력"],
+    ],
+    responses: [
+      "미안하다고 하고 끝내는 것보다 앞으로 조심하겠다고 말해주는 게 더 좋아. 천천히 지켜보면 되니까 무리해서 증명하진 마.",
+      "사과는 받았어. 약속은 크게 말하기보다 작게 지켜줘. 나는 그런 쪽을 더 믿어.",
+    ],
+  },
+  {
+    id: "future_rain_walk",
+    keywordGroups: [
+      ["퇴원", "회복", "나중", "다음"],
+      ["비", "우산", "빗소리"],
+      ["산책", "걷"],
+    ],
+    responses: [
+      "퇴원하고 몸이 괜찮아지면, 비 오는 날 우산 들고 천천히 산책하자. 말이 많지 않아도 괜찮은 그런 걸로.",
+      "회복하면 빗소리 들으면서 같이 걷는 거 좋겠다. 대신 오늘은 그 약속을 위해 쉬는 날로 하자.",
+      "나중에 비 오는 날 산책하자는 말 좋다. 지금은 병원에서 무리하지 말고, 그때 천천히 걸을 힘부터 만들자.",
+    ],
+  },
+]
+
 const harinIntents: Intent[] = [
   {
     id: "apology",
@@ -241,6 +297,13 @@ export function getHarinDeterministicReply(input: HarinReplyInput): string {
     .slice(-6)
     .map((message) => message.text)
     .join(" ")
+
+  const blendedIntent = blendedIntents.find((intent) =>
+    intent.keywordGroups.every((group) => includesAny(text, group)),
+  )
+  if (blendedIntent) {
+    return pickResponse(blendedIntent.responses, text, input.messages.length)
+  }
 
   const rememberedIntent = contextualMemory.find(
     (intent) => includesAny(recentText, intent.keywords) && includesAny(text, intent.keywords),

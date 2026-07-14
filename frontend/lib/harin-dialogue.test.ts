@@ -53,3 +53,24 @@ test("harin fallback still sounds like harin instead of a generic rotation", () 
 
   assert.match(reply, /듣고|말해|고마워|천천히|여기/)
 })
+
+test("harin blends gratitude and fear in one natural reply", () => {
+  const reply = getHarinDeterministicReply({
+    text: "옆에 있어줘서 고마워 근데 아직 너무 무서워",
+    messages: [ai("나 여기 있어. 천천히 말해도 돼.")],
+  })
+
+  assert.match(reply, /고마워|고맙|그렇게 말해/)
+  assert.match(reply, /무서|불안|천천히|괜찮/)
+})
+
+test("harin blends future plans with rain and walking context", () => {
+  const reply = getHarinDeterministicReply({
+    text: "퇴원하면 비 오는 날 같이 산책 가자",
+    messages: [user("비 오는 날 좋아해?"), ai("빗소리 들으면 조금 차분해져.")],
+  })
+
+  assert.match(reply, /퇴원|회복/)
+  assert.match(reply, /비|우산|빗소리/)
+  assert.match(reply, /산책|걷/)
+})
