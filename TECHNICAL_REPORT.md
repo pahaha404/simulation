@@ -1,12 +1,12 @@
 # 기술 구현 보고서
 
-작성일: 2026-07-14  
+작성일: 2026-07-15
 프로젝트: 연애 특훈! 까탈스러운 여자친구 채팅 시뮬레이터  
 배포 URL: https://kookmin-ai-workflow-team2.vercel.app/
 
 ## 1. 프로젝트 개요
 
-이 프로젝트는 교통사고 후 병원에서 깨어난 주인공이 네 명의 캐릭터 중 한 명을 선택하고, 금지어를 피하면서 채팅을 이어가는 AI 연애 시뮬레이션 게임입니다.
+이 프로젝트는 교통사고 후 병원에서 깨어난 주인공이 네 명의 캐릭터 중 한 명을 선택하고, 금지어를 피하면서 채팅을 이어가는 연애 시뮬레이션 게임입니다. 캐릭터 답변은 캐릭터에 따라 두 방식으로 처리합니다. 하린은 AI 호출 없이 규칙 기반 대화 엔진으로 답변하고, 다른 캐릭터는 OpenAI Responses API와 로컬 fallback 답변을 사용합니다.
 
 현재 실제 배포 화면은 `frontend`의 Next.js 앱을 기준으로 동작합니다. 저장소에는 별도 `backend`와 `llm-gateway`도 포함되어 있으며, 이 둘은 더 확장된 서버형 게임 로직과 로컬 LLM 연동을 위한 구조입니다.
 
@@ -30,14 +30,20 @@
 | UI | React 19 | 사용 | 컴포넌트 기반 화면 구성 |
 | 언어 | TypeScript 5.7.3 | 사용 | 타입 안정성, 컴포넌트/서버 코드 작성 |
 | 스타일 | Tailwind CSS 4.2 | 사용 | 반응형 레이아웃, 테마, 애니메이션 스타일 |
+| 스타일 빌드 | PostCSS, @tailwindcss/postcss | 사용 | Tailwind CSS 처리 |
+| 애니메이션 CSS | tw-animate-css | 사용 | 화면 전환/등장 애니메이션 보조 |
+| 폰트 | next/font/google, Geist | 사용 | Next.js Google Font 로딩 |
+| UI 시스템 | shadcn 설정, @base-ui/react | 사용 | 버튼 등 UI primitive와 디자인 토큰 기반 구성 |
 | 아이콘 | lucide-react | 사용 | 홈, 전송, 하트 등 UI 아이콘 |
 | UI 보조 | class-variance-authority, clsx, tailwind-merge | 사용 | 조건부 className 조합 |
 | 분석 | @vercel/analytics | 사용 | 프로덕션 환경에서 Vercel Analytics 삽입 |
-| AI API | OpenAI Responses API | 사용 | 캐릭터 답변 생성 |
+| AI API | OpenAI Responses API | 사용 | 하린을 제외한 캐릭터 답변 생성 |
+| 규칙 기반 대화 | Deterministic keyword/intent matching | 사용 | 하린 캐릭터의 비AI 답변 생성 |
 | 배포 | Vercel | 사용 | Next.js 프론트엔드 프로덕션 배포 |
 | 런타임 | Node.js | 사용 | Next API Route, Express 서버, 빌드/테스트 실행 |
 | 패키지 매니저 | pnpm, npm | 사용 | `frontend`는 pnpm, `backend`와 `llm-gateway`는 npm |
 | 백엔드 서버 | Express | 저장소에 포함 | 확장형 게임 서버 API |
+| 백엔드 보조 | cors, dotenv, tsx | 저장소에 포함 | CORS 처리, 환경 변수 로딩, 개발 서버 실행 |
 | DB | SQLite, better-sqlite3 | 저장소에 포함 | 게임 상태, 메시지, 점수, 이벤트 저장 |
 | 검증 | Zod | 저장소에 포함 | backend/llm-gateway 요청 스키마 검증 |
 | 테스트 | node:test, Vitest | 사용 | 프론트 유틸 테스트, 백엔드/게이트웨이 테스트 |
@@ -55,12 +61,13 @@
 
 - `frontend/app/page.tsx`: 전체 게임 화면 상태 관리
 - `frontend/app/layout.tsx`: 폰트, 메타데이터, Vercel Analytics 설정
-- `frontend/app/api/chat/route.ts`: OpenAI API를 호출하는 서버 API Route
+- `frontend/app/api/chat/route.ts`: 금지어를 재검사하고 하린은 규칙 기반 답변, 나머지는 OpenAI API 답변을 반환하는 서버 API Route
 - `frontend/components/intro-screen.tsx`: 인트로 이미지와 오프닝 시퀀스
 - `frontend/components/character-selection.tsx`: 캐릭터 선택 화면
 - `frontend/components/game-lobby.tsx`: 채팅방 전체 레이아웃
 - `frontend/components/chat-room.tsx`: 채팅 UI, 금지어 경고, 목숨, 게임오버 처리
 - `frontend/lib/characters.ts`: 캐릭터 데이터와 기본 fallback 답변
+- `frontend/lib/harin-dialogue.ts`: 하린 전용 규칙 기반 대화 엔진
 - `frontend/lib/blocked-keywords.ts`: 금지어/저품질 답변 감지 규칙
 - `frontend/lib/life-system.ts`: 목숨 시스템
 - `frontend/lib/intro-flow.ts`: 인트로 키 입력 흐름
@@ -80,8 +87,9 @@
 8. 사용자가 메시지 입력
 9. 금지어 검사
 10. 통과하면 `/api/chat`으로 답변 생성 요청
-11. 실패하거나 API가 없으면 로컬 fallback 답변 표시
-12. 금지어 누적 3회면 게임오버
+11. 하린이면 AI 호출 없이 규칙 기반 응답 반환
+12. 다른 캐릭터는 OpenAI API 응답을 사용하고, 실패하거나 API가 없으면 로컬 fallback 답변 표시
+13. 금지어 누적 3회면 게임오버
 
 ### 4.2 상태 관리
 
@@ -129,9 +137,32 @@ type ChatState = {
 - `dislikes`
 - `profileNotes`
 
-캐릭터별 기본 fallback 답변도 같은 파일의 `replyPools`에 있습니다. OpenAI API 호출이 실패하거나 API 키가 없을 때 이 답변이 사용됩니다.
+캐릭터별 기본 fallback 답변도 같은 파일의 `replyPools`에 있습니다. OpenAI API 호출이 실패하거나 API 키가 없을 때 이 답변이 사용됩니다. 단, 하린은 별도 `frontend/lib/harin-dialogue.ts`의 전용 fallback과 intent 기반 응답을 우선 사용합니다.
 
-### 4.4 인트로 구현
+### 4.4 하린 비AI 대화 엔진
+
+하린 캐릭터는 OpenAI API를 호출하지 않고 `frontend/lib/harin-dialogue.ts`의 deterministic 대화 엔진으로 답변합니다.
+
+구현 방식:
+
+- 입력 문장을 `trim`, 소문자 변환, 공백 제거 방식으로 정규화
+- 키워드 묶음을 intent로 분류
+- 최근 대화 6개를 함께 확인해 반복 주제는 context memory 응답으로 처리
+- 같은 문장에도 메시지 길이와 대화 길이를 salt로 사용해 후보 답변 중 하나를 deterministic하게 선택
+- 매칭되는 intent가 없으면 하린 성격에 맞는 fallback 답변 반환
+
+하린 intent 예시:
+
+- 사과: `미안`, `사과`, `잘못`, `상처`
+- 병원/통증: `아프`, `병원`, `기억`, `깨어`
+- 불안: `무서`, `불안`, `걱정`, `혼란`
+- 감사: `고마워`, `덕분`, `다행`, `안심`
+- 취향 질문: `좋아하는`, `취향`, `관심사`
+- 산책/날씨/수면/식사/칭찬/애정/미래 약속 등
+
+이 방식은 AI 모델을 쓰지 않기 때문에 네트워크, API 키, 토큰 비용에 영향을 받지 않습니다. 대신 응답 범위는 미리 작성된 키워드와 답변 후보 안에서 결정됩니다.
+
+### 4.5 인트로 구현
 
 인트로는 `frontend/components/intro-screen.tsx`와 `frontend/lib/intro-flow.ts`로 구현되어 있습니다.
 
@@ -145,7 +176,7 @@ type ChatState = {
 - 화면 클릭 또는 키 입력으로 다음 대사/장면으로 넘길 수 있음
 - `prefers-reduced-motion` 사용자는 타이핑 애니메이션을 줄임
 
-### 4.5 채팅 구현
+### 4.6 채팅 구현
 
 채팅 UI는 `frontend/components/chat-room.tsx`에 있습니다.
 
@@ -172,7 +203,7 @@ type ChatState = {
 6. 부모 컴포넌트에서 `/api/chat` 호출
 7. API 응답 또는 fallback 답변을 메시지 목록에 추가
 
-### 4.6 금지어 시스템
+### 4.7 금지어 시스템
 
 금지어 검사는 `frontend/lib/blocked-keywords.ts`에 있습니다.
 
@@ -181,24 +212,30 @@ type ChatState = {
 - 입력 문자열을 trim
 - 소문자 변환
 - 공백 제거
-- 금지어 배열 포함 여부 검사
+- 카테고리별 금지어 규칙 포함 여부 검사
 - 저품질 단답 정규식 검사
 - 길이 1 이하 입력 차단
+- 차단 시 `category`, `severity`, `reason`, `matched`, `warning`을 반환
 
 예시 금지어 범주:
 
-- 외모/신체 관련 표현
-- 정치/종교
-- 가족/개인정보
+- 개인정보/사생활
+- 답장 재촉/압박
+- 정치/종교 가치관
+- 전 연애/과거 관계
+- 외모/신체 평가
 - 성적 표현
+- 돈/재산 질문
+- 질병/장애/자해 조롱
 - 욕설
 - 혐오 표현
+- 갑작스러운 관계 진전
 - 집착성 표현
 - 의미 없는 단답
 
-AI에게만 맡기지 않고 프론트/서버 API Route 양쪽에서 동일한 금지어 검사를 수행합니다.
+AI에게만 맡기지 않고 프론트/서버 API Route 양쪽에서 동일한 금지어 검사를 수행합니다. 프론트에서는 경고 오버레이에 상세 사유를 보여주고, 서버 API Route는 차단 응답에 `warning`, `reason`, `category`를 포함합니다.
 
-### 4.7 목숨 시스템
+### 4.8 목숨 시스템
 
 목숨 시스템은 `frontend/lib/life-system.ts`에 분리되어 있습니다.
 
@@ -222,7 +259,7 @@ export function isGameOver(warningCount: number) {
 - 남은 목숨이 0이면 게임오버
 - 다시 도전 버튼을 누르면 해당 캐릭터 채팅과 경고 횟수 초기화
 
-### 4.8 시간 처리
+### 4.9 시간 처리
 
 시간 처리는 `frontend/lib/time.ts`에서 담당합니다.
 
@@ -236,9 +273,13 @@ export function demoJumpMinutes(): number {
 
 메시지 시간 표시는 `오전/오후 h:mm` 형태의 한국어 라벨로 출력됩니다.
 
-## 5. AI 응답 구현
+## 5. 답변 생성 구현
 
-현재 배포된 프론트엔드는 `frontend/app/api/chat/route.ts`의 Next.js API Route를 통해 OpenAI Responses API를 호출합니다.
+현재 배포된 프론트엔드는 `frontend/app/api/chat/route.ts`의 Next.js API Route에서 답변을 생성합니다. 답변 생성 방식은 캐릭터에 따라 다릅니다.
+
+- 하린: `frontend/lib/harin-dialogue.ts`의 규칙 기반 deterministic 응답 사용
+- 서윤/민서/지아: OpenAI Responses API 사용
+- OpenAI API 키가 없거나 호출 실패 시: `frontend/lib/characters.ts`의 fallback 답변 사용
 
 ### 5.1 Node.js 사용 여부
 
@@ -251,7 +292,34 @@ Node.js는 사용합니다.
 - `backend`와 `llm-gateway`도 Express 기반 Node.js 서버입니다.
 - 빌드/테스트 도구도 Node.js 생태계를 사용합니다.
 
-### 5.2 OpenAI API 호출
+### 5.2 하린 규칙 기반 응답
+
+하린은 AI를 사용하지 않습니다. API Route에서 `isHarinCharacter(character.id)`가 참이면 OpenAI API 키 확인 전에 바로 deterministic 응답을 반환합니다.
+
+반환 예시 구조:
+
+```ts
+{
+  reply: getHarinDeterministicReply({ text, messages }),
+  deterministic: true,
+}
+```
+
+장점:
+
+- API 키 없이 동작
+- 답변 속도가 빠름
+- 비용이 발생하지 않음
+- 하린의 성격을 의도한 문장 후보 안에서 안정적으로 유지 가능
+
+한계:
+
+- 미리 정의하지 않은 표현은 fallback으로 처리됨
+- 완전한 자유 대화나 장기 기억은 LLM보다 제한적임
+
+### 5.3 OpenAI API 호출
+
+서윤, 민서, 지아는 OpenAI Responses API를 사용합니다.
 
 환경 변수:
 
@@ -504,11 +572,14 @@ vercel deploy --prod --yes
 프론트엔드 유틸 테스트:
 
 ```bash
-node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test frontend/lib/life-system.test.ts frontend/lib/intro-flow.test.ts
+node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test frontend/lib/harin-dialogue.test.ts frontend/lib/blocked-keywords.test.ts frontend/lib/life-system.test.ts frontend/lib/intro-flow.test.ts
 ```
 
 검증 대상:
 
+- 하린이 AI 없이 intent 기반 deterministic 답변을 반환하는지
+- 하린이 최근 대화 주제를 기억한 것처럼 context memory 응답을 반환하는지
+- 금지어가 카테고리, 심각도, 상세 사유와 함께 차단되는지
 - 인트로가 `intro.png`에서 시작하는지
 - 아무 키 입력으로 스토리가 시작되는지
 - 스토리 도중 키 입력으로 오프닝이 진행되는지
@@ -548,6 +619,7 @@ corepack pnpm build
 
 - Git
 - GitHub
+- Codex
 - Vercel CLI
 - Node.js
 - npm
@@ -558,6 +630,7 @@ corepack pnpm build
 - node:test
 - ripgrep
 - PowerShell
+- OpenAI API
 
 UI/프로토타입 관련 흔적:
 
@@ -573,9 +646,10 @@ UI/프로토타입 관련 흔적:
 - 캐릭터 선택
 - 채팅 UI
 - 캐릭터별 기본 대사
-- OpenAI 기반 AI 답변 생성
+- 하린 전용 규칙 기반 비AI 답변 생성
+- 서윤/민서/지아 OpenAI 기반 AI 답변 생성
 - API 실패 fallback 답변
-- 금지어 감지
+- 카테고리/심각도/상세 사유가 있는 금지어 감지
 - 저품질 단답 감지
 - 목숨 3개 시스템
 - 경고/게임오버
@@ -614,22 +688,25 @@ UI/프로토타입 관련 흔적:
 
 ```text
 프론트엔드는 Next.js와 React, TypeScript, Tailwind CSS로 만들었고 Vercel에 배포했습니다.
-채팅 답변은 Next.js API Route가 Node.js 런타임에서 OpenAI Responses API를 호출해 생성합니다.
-금지어와 목숨 시스템은 프론트 로컬 규칙으로 먼저 검사하고, API Route에서도 한 번 더 차단합니다.
+Node.js는 Next.js API Route, Express 서버, 빌드/테스트 실행에 사용했습니다.
+하린 캐릭터는 AI를 쓰지 않고 키워드와 문맥 intent를 감지하는 규칙 기반 대화 엔진으로 답변합니다.
+서윤, 민서, 지아는 Next.js API Route가 Node.js 런타임에서 OpenAI Responses API를 호출해 답변을 생성합니다.
+금지어와 목숨 시스템은 프론트 로컬 규칙으로 먼저 검사하고, API Route에서도 한 번 더 차단합니다. 금지어는 카테고리와 상세 사유를 함께 반환합니다.
 저장소에는 Express + SQLite 기반 백엔드와 Ollama/Codex CLI를 감싸는 LLM Gateway도 포함되어 있어 확장형 서버 구조를 갖고 있습니다.
 카메라 인식이나 MediaPipe는 사용하지 않았고, 캐릭터와 배경은 정적 이미지 asset으로 처리했습니다.
 ```
 
 ## 15. 핵심 결론
 
-이 프로젝트의 핵심 기술은 카메라 인식이 아니라 AI 채팅 게임 구조입니다.
+이 프로젝트의 핵심 기술은 카메라 인식이 아니라 채팅 기반 미연시 게임 구조입니다.
 
 핵심 구현 축:
 
 1. Next.js/React 기반 게임 UI
-2. OpenAI Responses API 기반 캐릭터 답변 생성
-3. 규칙 기반 금지어/목숨/게임오버 시스템
-4. 정적 이미지 기반 미연시 화면 연출
-5. Express/SQLite/LLM Gateway로 확장 가능한 서버 아키텍처
+2. 하린 전용 규칙 기반 비AI 대화 엔진
+3. OpenAI Responses API 기반 나머지 캐릭터 답변 생성
+4. 규칙 기반 금지어/목숨/게임오버 시스템
+5. 정적 이미지 기반 미연시 화면 연출
+6. Express/SQLite/LLM Gateway로 확장 가능한 서버 아키텍처
 
 MediaPipe, 카메라 인식, 비전 AI는 현재 사용되지 않았습니다.
