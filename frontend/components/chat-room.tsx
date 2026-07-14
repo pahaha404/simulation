@@ -6,6 +6,7 @@ import { ArrowLeft, Send, Heart } from "lucide-react"
 import type { Character } from "@/lib/characters"
 import { getTimelinePhase } from "@/lib/characters"
 import { evaluateBlockedMessage } from "@/lib/blocked-keywords"
+import { createBlockedMessageGate, type BlockedMessageGate } from "@/lib/blocked-message-gate"
 import { getRemainingLives, isGameOver, MAX_LIVES } from "@/lib/life-system"
 import { formatKoreanTime } from "@/lib/time"
 import type { Message } from "@/app/page"
@@ -37,8 +38,13 @@ export function ChatRoom({
   const [warning, setWarning] = useState<string | null>(null)
   const [phaseEvent, setPhaseEvent] = useState<string | null>(null)
   const composingRef = useRef(false)
+  const blockedGateRef = useRef<BlockedMessageGate | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const previousPhaseRef = useRef<string | null>(null)
+
+  if (!blockedGateRef.current) {
+    blockedGateRef.current = createBlockedMessageGate()
+  }
 
   const userMessageCount = messages.filter((message) => message.sender === "user").length
   const phase = getTimelinePhase(userMessageCount)
@@ -67,9 +73,14 @@ export function ChatRoom({
     if (!text || isTyping || gameOver) return
     const blockedMessage = evaluateBlockedMessage(text)
     if (blockedMessage.blocked) {
+      const blockedGate = blockedGateRef.current
+      if (!blockedGate?.acquire()) return
       onBlockedMessage()
       setWarning(blockedMessage.reason)
-      window.setTimeout(() => setWarning(null), 3200)
+      window.setTimeout(() => {
+        blockedGate.release()
+        setWarning(null)
+      }, 3200)
       return
     }
     setDraft("")
@@ -135,6 +146,7 @@ export function ChatRoom({
               <button
                 type="button"
                 onClick={() => {
+                  blockedGateRef.current?.release()
                   setWarning(null)
                   onRetry()
                 }}
