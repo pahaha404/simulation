@@ -176,16 +176,6 @@ function CharacterInfoCard({ character }: { character: Character }) {
           </ul>
         </section>
 
-        <div
-          className="mt-auto rounded-2xl border px-4 py-3 text-center text-sm font-black"
-          style={{
-            borderColor: character.glow,
-            color: character.glow,
-            backgroundColor: `${character.glow}18`,
-          }}
-        >
-          {character.aura}
-        </div>
       </div>
     </div>
   )
@@ -242,20 +232,7 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
 function CharacterStandee({ character }: { character: Character }) {
   return (
     <div className="relative flex h-[min(76svh,43rem)] w-full items-end">
-      {/* 오라 글로우 */}
-      <div
-        className="absolute -bottom-6 left-1/2 size-64 -translate-x-1/2 rounded-full blur-3xl"
-        style={{ backgroundColor: character.glow, opacity: 0.45 }}
-      />
-
-      {/* 카드 */}
-      <div
-        className="relative h-full w-full overflow-hidden rounded-[1.75rem] border-2 shadow-2xl"
-        style={{
-          borderColor: character.glow,
-          boxShadow: `0 0 42px ${character.glow}66`,
-        }}
-      >
+      <div className="relative h-full w-full overflow-hidden rounded-[1.75rem] shadow-2xl">
         <Image
           src={character.standee || "/placeholder.svg"}
           alt={`${character.name} 캐릭터 일러스트`}
@@ -264,14 +241,6 @@ function CharacterStandee({ character }: { character: Character }) {
           className="object-contain object-center"
         />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent" />
-
-        {/* 이름 태그 */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-xl border border-card/40 bg-card/85 px-3 py-1.5 text-center shadow-lg backdrop-blur-md">
-          <p className="text-sm font-black text-foreground">{character.name}</p>
-          <p className="text-[10px] font-bold" style={{ color: character.glow }}>
-            {character.aura}
-          </p>
-        </div>
       </div>
     </div>
   )

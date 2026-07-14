@@ -8,10 +8,8 @@ export type Character = {
   standee: string
   /** tailwind gradient classes for the card accent */
   accent: string
-  /** neon glow color (CSS color) used for the standee aura */
+  /** accent glow color (CSS color) */
   glow: string
-  /** short aura label shown on the standee tag */
-  aura: string
   /** opening message shown when chat starts */
   greeting: string
   likes: string[]
@@ -29,7 +27,6 @@ export const characters: Character[] = [
     standee: "/characters/1/standee.png",
     accent: "from-sky-100 to-rose-100",
     glow: "oklch(0.78 0.08 230)",
-    aura: "Soft Blue Aura",
     greeting: "괜찮아? 많이 놀랐겠다. 천천히 말해도 돼. 나 듣고 있어.",
     likes: ["차분한 산책", "따뜻한 말투", "솔직한 걱정"],
     dislikes: ["재촉하는 대화", "무성의한 답장", "상처 주는 농담"],
@@ -44,7 +41,6 @@ export const characters: Character[] = [
     standee: "/characters/2/standee.png",
     accent: "from-red-200 to-neutral-100",
     glow: "oklch(0.58 0.22 25)",
-    aura: "Crimson Aura",
     greeting: "살아있네. 다행이긴 한데... 그런 표정으로 있지는 마.",
     likes: ["예의 있는 직진", "현실적인 계획", "선 넘지 않는 장난"],
     dislikes: ["가벼운 플러팅", "무례한 질문", "눈치 없는 단답"],
@@ -59,7 +55,6 @@ export const characters: Character[] = [
     standee: "/characters/3/standee.png",
     accent: "from-pink-200 to-rose-100",
     glow: "oklch(0.76 0.16 350)",
-    aura: "Pink Aura",
     greeting: "야 너 진짜 걱정했잖아. 이제 괜찮은 거 맞지?",
     likes: ["밝은 리액션", "귀여운 농담", "빠른 공감"],
     dislikes: ["분위기 깨는 말", "지나친 진지함", "무반응"],
@@ -74,7 +69,6 @@ export const characters: Character[] = [
     standee: "/characters/4/standee.png",
     accent: "from-neutral-300 to-purple-100",
     glow: "oklch(0.42 0.12 300)",
-    aura: "Deep Purple Aura",
     greeting: "깨어났구나. 그 말투... 기억해둘게.",
     likes: ["조용한 배려", "기억해주는 대화", "은근한 진심"],
     dislikes: ["캐묻는 질문", "과한 텐션", "가벼운 말바꾸기"],
